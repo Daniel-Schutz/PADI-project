@@ -31,23 +31,76 @@ public class DadkvsPaxosServiceImpl extends DadkvsPaxosServiceGrpc.DadkvsPaxosSe
 
     @Override
     public void phaseone(DadkvsPaxos.PhaseOneRequest request, StreamObserver<DadkvsPaxos.PhaseOneReply> responseObserver) {
-	// for debug purposes
-	System.out.println("Receive phase1 request: " + request);
-
+        // Extrair o número da proposta
+        int proposalNumber = request.getProposalNumber();
+    
+        // Verificar se já foi prometido algo maior
+        if (server_state.getHighestPromisedProposal() < proposalNumber) {
+            server_state.setHighestPromisedProposal(proposalNumber);
+    
+            // Responder com sucesso e retornar o último valor aceito, se houver
+            DadkvsPaxos.PhaseOneReply reply = DadkvsPaxos.PhaseOneReply.newBuilder()
+                .setSuccess(true)
+                .setLastAcceptedProposal(server_state.getLastAcceptedProposal())
+                .setLastAcceptedValue(server_state.getLastAcceptedValue())
+                .build();
+    
+            responseObserver.onNext(reply);
+        } else {
+            // Promessa falhou
+            DadkvsPaxos.PhaseOneReply reply = DadkvsPaxos.PhaseOneReply.newBuilder()
+                .setSuccess(false)
+                .build();
+            responseObserver.onNext(reply);
+        }
+    
+        responseObserver.onCompleted();
     }
-
+    
+    
     @Override
     public void phasetwo(DadkvsPaxos.PhaseTwoRequest request, StreamObserver<DadkvsPaxos.PhaseTwoReply> responseObserver) {
-	// for debug purposes
-	System.out.println ("Receive phase two request: " + request);
+        int proposalNumber = request.getProposalNumber();
+        String value = request.getCommitRequest().toString(); // Serializar valor da transação
+    
+        if (server_state.getHighestPromisedProposal() <= proposalNumber) {
+            // Aceitar o valor e atualizar o estado do servidor
+            server_state.setLastAcceptedProposal(proposalNumber);
+            server_state.setLastAcceptedValue(value);
+    
+            DadkvsPaxos.PhaseTwoReply reply = DadkvsPaxos.PhaseTwoReply.newBuilder()
+                .setSuccess(true)
+                .build();
+    
+            responseObserver.onNext(reply);
+        } else {
+            // Rejeitar
+            DadkvsPaxos.PhaseTwoReply reply = DadkvsPaxos.PhaseTwoReply.newBuilder()
+                .setSuccess(false)
+                .build();
+    
+            responseObserver.onNext(reply);
+        }
+    
+        responseObserver.onCompleted();
+    }   
+    
 
-    }
 
     @Override
     public void learn(DadkvsPaxos.LearnRequest request, StreamObserver<DadkvsPaxos.LearnReply> responseObserver) {
-	// for debug purposes
-	System.out.println("Receive learn request: " + request);
-
-    }
+        String learnedValue = request.getValue();
+        
+        // Aprender o valor
+        server_state.setLearnedValue(learnedValue);
+        
+        // Responder com sucesso
+        DadkvsPaxos.LearnReply reply = DadkvsPaxos.LearnReply.newBuilder()
+            .setSuccess(true)
+            .build();
+        
+        responseObserver.onNext(reply);
+        responseObserver.onCompleted();
+}
 
 }

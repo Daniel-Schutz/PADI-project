@@ -9,6 +9,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class DadkvsServerState {
+    // Estados gerais do servidor
     boolean i_am_leader;
     int debug_mode;
     int base_port;
@@ -19,6 +20,12 @@ public class DadkvsServerState {
     Thread main_loop_worker;
     private int sequenceNumber;
     private List<DadkvsMainServiceGrpc.DadkvsMainServiceBlockingStub> serverStubs;
+
+    // Estados para o algoritmo Paxos
+    private int highestPromisedProposal = -1;   // Maior número de proposta prometido
+    private int lastAcceptedProposal = -1;      // Último número de proposta aceito
+    private String lastAcceptedValue = "";      // Último valor aceito (ajustado para inicializar corretamente)
+    private String learnedValue = "";           // Valor aprendido (após consenso)
 
     public DadkvsServerState(int kv_size, int port, int myself) {
         base_port = port;
@@ -74,5 +81,41 @@ public class DadkvsServerState {
 
     public DadkvsMainServiceGrpc.DadkvsMainServiceBlockingStub getLeaderStub() {
         return serverStubs.get(0);
+    }
+
+    // Paxos: Getter e Setter para o maior número de proposta prometido
+    public synchronized int getHighestPromisedProposal() {
+        return highestPromisedProposal;
+    }
+
+    public synchronized void setHighestPromisedProposal(int proposalNumber) {
+        this.highestPromisedProposal = proposalNumber;
+    }
+
+    // Paxos: Getter e Setter para o último número de proposta aceito
+    public synchronized int getLastAcceptedProposal() {
+        return lastAcceptedProposal;
+    }
+
+    public synchronized void setLastAcceptedProposal(int proposalNumber) {
+        this.lastAcceptedProposal = proposalNumber;
+    }
+
+    // Paxos: Getter e Setter para o último valor aceito
+    public synchronized String getLastAcceptedValue() {
+        return lastAcceptedValue;
+    }
+
+    public synchronized void setLastAcceptedValue(String value) {
+        this.lastAcceptedValue = value;
+    }
+
+    // Paxos: Getter e Setter para o valor aprendido
+    public synchronized String getLearnedValue() {
+        return learnedValue;
+    }
+
+    public synchronized void setLearnedValue(String value) {
+        this.learnedValue = value;
     }
 }
